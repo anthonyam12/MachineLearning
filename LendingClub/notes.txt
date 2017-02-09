@@ -1,0 +1,27 @@
+Euclidian Distance Between Two Vectors x_i and x_j with k features:
+	1. sqrt(sum((x_ik + x_jk)^2)) -- verify this
+	2. This distance defines the similarity measure of the two vectors (produces the projection of vector x_i onto x_j)
+		i. Smaller Euclidian Distances => More similar samples
+	3. Alg Implementation: 
+		i. Represent each feature in the data as a a numeric value
+		ii. Find the Euclidian distance of the samples
+		iii. Group samples based on their distances to each other
+		iv. etc. 
+
+
+K - Nearest Neighbors (not so good for > ~1GB datasets) [somewhat assumes binary classification {positive, negative}]:
+	1. have dataset of values (all numeric values, convert qualitative to quantitative somehow)
+	2. Produce new example x_t 
+		i. Compare x_t with every other value in the 'training' dataset by taking the Euclidian distance of x_t and the other points
+		ii. find the 'k' data points with the shortest distances to x_t
+		iii. average the classifications of the k nearest neighbors to get the classification of x_t
+		iv. track shortest distances
+		v. track how many votes for each classification (i.e. k=3, find 3 nearest neighors, 2 vote +, 1 vote -, track/display 66% said + to get classification
+			a. tracking this inforamtion can allow us to analyze accuracy and determine how much faith we have in the classification
+	3. Can we use the distance between x_t and the k nearest neighbors to help determine confidence?
+		i. Closer neighbors => better classification?
+		ii. Further neighbors do not?
+	4. Is the number of votes for each class a good indicator of confidence?
+	5. Which values were close?
+	6. Which, if any, sequence of numbers (vector values) were most commonly found for a positive classification?
+	7. Which, if any, sequence of numbers were most commonly found for a negative classification
