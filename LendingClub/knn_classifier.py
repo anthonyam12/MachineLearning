@@ -1,5 +1,7 @@
 import data_controller as dc
 from math import *
+import threading
+from queue import Queue
 
 ### GLOBAL STRING TO INT CONSTANTS
 # NaN
@@ -209,7 +211,7 @@ def knn(x_t, data_dict, k=5):
 				d[0] = row[LOAN_STATUS]
 				break
 	
-	print(nn)
+	#print(nn)
 	# average nearest neighbors classification
 	ones = 0
 	zeros = 0
@@ -224,6 +226,25 @@ def knn(x_t, data_dict, k=5):
 	else:
 		return 0
 
+'''
+	Runs the program for a certain subset of the test_data.
+	Mainly used for testing, when in production, very few vectors will be passed to the program.
+'''
+def worker(test_data, train_data, k=5):
+	right = 0
+	wrong = 0
+	
+	for key in test_data:
+		row = test_data[key]
+		actual = row[LOAN_STATUS]
+		if knn(row[1:], train_data) == actual:
+			right += 1
+		else:
+			wrong += 1
+		print(key)
+
+	q.put(right, wrong)
+
 
 #######################################################################################################################
 
@@ -236,6 +257,7 @@ if __name__ == '__main__':
 	test_data = intRateToNumeric(test_data)
 	test_data = convertStringsToNumeric(test_data)
 	test_data = removeBadRows(test_data)
+	total_cases = len(test_data)
 
 	print('\nGetting train data...')
 	train_data = dc.get_data('LoanStats_2016Q3.csv', prune_cols=cols)
@@ -243,17 +265,45 @@ if __name__ == '__main__':
 	train_data = intRateToNumeric(train_data)
 	train_data = removeBadRows(train_data)
 
+	num_threads = 8
+	dict_args = []
+	rows_per_thread = int(len(test_data) / num_threads)
+	for i in range(num_threads - 1):
+		d = dict()
+		start = i * rows_per_thread
+		end = (start + rows_per_thread) - 1
+		for k, v in list(test_data.items())[start:end]:
+			d[k] = v
+		dict_args.append(d)
+
+	start = 7 * rows_per_thread
+	d = dict()
+	for k, v in list(test_data.items())[start:]:
+		d[k] = v
+	dict_args.append(d)
+		
+
 	# [:] makes a copy of a list by value
 	right = 0
 	wrong = 0
-	total_cases = len(test_data)
-	for key in test_data:
-		row = test_data[key]
-		actual = row[LOAN_STATUS]
-		if knn(row[1:], train_data) == actual:
-			right += 1
-		else:
-			wrong += 1
+
+	q = Queue()
+	threads = []
+	for i in range(num_threads):
+		t = threading.Thread(target=worker, args=(dict_args[i], train_data), name=str(i))
+		t.daemon = True
+		t.start()
+		threads.append(t)	
+
+	for t in threads:
+		t.join()
+
+	print(q)
+
+	for r in q:
+		print(r)
+		right += r[0]
+		wrong += r[1]
 
 	print("Right: ", right/total_cases)
 	print("Wrong: ", wrong/total_cases)
