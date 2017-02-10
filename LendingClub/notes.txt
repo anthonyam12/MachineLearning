@@ -25,3 +25,9 @@ K - Nearest Neighbors (not so good for > ~1GB datasets) [somewhat assumes binary
 	5. Which values were close?
 	6. Which, if any, sequence of numbers (vector values) were most commonly found for a positive classification?
 	7. Which, if any, sequence of numbers were most commonly found for a negative classification
+
+    -- The current KNN works poorly, it's worse than randomly picking and there is no correlation between correct guesses and low distances 
+        - possbile causes, no correlation in data  
+        - bad algorithm
+        - improper weighting (there are none)
+    

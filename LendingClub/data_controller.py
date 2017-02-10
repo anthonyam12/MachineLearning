@@ -14,8 +14,8 @@ def get_data(filename, prune_cols=False):
 	cols = []
 
 	print("Opening file: ", filename)
-	csvfile = open(filename, newline='')
-	reader = csv.DictReader(csvfile)
+	csvfile = open(filename, newline='', encoding="utf8")
+	reader = csv.DictReader(csvfile, )
 	
 	if prune_cols:
 		cols = prune_cols
