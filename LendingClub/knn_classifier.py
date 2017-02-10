@@ -3,6 +3,7 @@ from math import *
 import threading
 from queue import Queue
 import random
+import pylab as plt
 
 ### GLOBAL STRING TO INT CONSTANTS
 # NaN
@@ -236,15 +237,18 @@ def knn(x_t, data_dict, k=5):
 	min_dist = 999999999
 	avg_dist = 0
 	for n in nn:
+		# weighted distance, the nearest neighbors with shortest distances count more
+		# this weights the votes, not the features
 		if n[0] == 1:
-			ones += 1
+			ones += n[1]
 		else:
-			zeros += 1
+			zeros += n[1]
 		avg_dist += n[1]
 		if n[1] < min_dist:
 			min_dist = n[1]
 			
-	if ones > zeros:
+	# want the ones/zeros with the smallest distance (these nodes were typically closer to x_t)
+	if ones < zeros:
 		certainty = ones/k
 		return 1, certainty, min_dist, avg_dist
 	else:
@@ -339,8 +343,8 @@ if __name__ == '__main__':
 	train_data = intRateToNumeric(train_data)
 	train_data = removeBadRows(train_data)
 
-	# get 100 rows 
-	cases = 300
+	# get cases  
+	cases = 500
 	start = random.randint(0, len(test_data) - (cases + 1))
 	examples = dict()
 	for k, v in list(test_data.items())[start:start+cases]:
@@ -368,12 +372,12 @@ if __name__ == '__main__':
 			positives += 1
 		if  classification[0] == actual:
 			right += 1
-			print("Correct classification. Certainty: ", classification[1])
+			print("Correct classification. Average Distance: ", classification[3])
 			correct_certain.append(classification[1])
 			correct_min_dist.append(classification[2])
 			correct_avg_dist.append(classification[3])
 		else:
-			print("Incorrect classification. Certainty: ", classification[1], ' Actual: ', actual)
+			print("Incorrect classification. Average Distance: ", classification[3], ' Actual: ', actual)
 			incorrect_certain.append(classification[1])
 			incorrect_min_dist.append(classification[2])
 			incorrect_avg_dist.append(classification[3])
@@ -394,3 +398,11 @@ if __name__ == '__main__':
 
 	print("\nCorrect Avg Distance Average: ", sum(correct_avg_dist)/len(correct_avg_dist))
 	print("Incorrect Avg Distance Average: ", sum(incorrect_avg_dist)/len(incorrect_avg_dist))
+
+
+	c_run = [i for i in range(len(correct_avg_dist))]
+	i_run = [i for i in  range(len(incorrect_avg_dist))]
+	
+	plt.plot(c_run, correct_avg_dist, 'g.')
+	plt.plot(i_run, incorrect_avg_dist, 'r.')
+	plt.show()
