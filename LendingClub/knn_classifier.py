@@ -196,6 +196,62 @@ def convertStringsToNumeric(data_dict):
 	return data_dict
 
 '''
+	Normalizes the values so that each feature has an equal vote on 
+	'closeness'. Convert data to values between 0 and 1
+'''
+def normalize(data_dict):
+	maxes = dict()
+	
+	# known/defined
+	maxes[GRADE] = 6
+	maxes[EMP_LENGTH] = 10
+	maxes[TERM] = 60
+	maxes[HOME_OWNERSHIP] = 4
+
+	# unknown
+	maxes[DTI] = 0
+	maxes[INT_RATE] = 0
+	maxes[ANNUAL_INC] = 0
+	maxes[LOAN_AMNT] = 0
+	maxes[DELINQ_2YRS] = 0
+	maxes[INSTALLMENT] = 0
+	maxes[INQ_LAST_6MTHS] = 0
+	maxes[OPEN_ACC] = 0
+	maxes[PUB_REC] = 0
+	maxes[REVOL_BAL] = 0
+	maxes[TOTAL_ACC] = 0
+
+	for key in data_dict:
+		row = data_dict[key]
+		if(row[DTI] > maxes[DTI]):
+			maxes[DTI] = row[DTI]
+		if(row[INT_RATE] > maxes[INT_RATE]):
+			maxes[INT_RATE] = row[INT_RATE]
+		if(row[ANNUAL_INC] > maxes[ANNUAL_INC]):
+			maxes[ANNUAL_INC] = row[ANNUAL_INC]
+		if(row[LOAN_AMNT] > maxes[LOAN_AMNT]):
+			maxes[LOAN_AMNT] = row[LOAN_AMNT]
+		if(row[DELINQ_2YRS] > maxes[DELINQ_2YRS]):
+			maxes[DELINQ_2YRS] = row[DELINQ_2YRS]
+		if(row[INSTALLMENT] > maxes[INSTALLMENT]):
+			maxes[INSTALLMENT] = row[INSTALLMENT]
+		if(row[INQ_LAST_6MTHS] > maxes[INQ_LAST_6MTHS]):
+			maxes[INQ_LAST_6MTHS] = row[INQ_LAST_6MTHS]
+		if(row[OPEN_ACC] > maxes[OPEN_ACC]):
+			maxes[OPEN_ACC] = row[OPEN_ACC]
+		if(row[PUB_REC] > maxes[PUB_REC]):
+			maxes[PUB_REC] = row[PUB_REC]
+		if(row[REVOL_BAL] > maxes[REVOL_BAL]):
+			maxes[REVOL_BAL] = row[REVOL_BAL]
+		if(row[TOTAL_ACC] > maxes[TOTAL_ACC]):
+			maxes[TOTAL_ACC] = row[TOTAL_ACC]
+
+	for key in data_dict:
+		# is there a loop through columns in python dictionaries?
+		# normalize the values row[val] /= maxes[val]
+	return data_dict
+
+'''
 	Returns the Euclidian distance between two vectors
 
 	x_1, x_2 - vectors (lists of values, must have same dimensions)
