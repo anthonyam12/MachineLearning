@@ -4,6 +4,7 @@ import threading
 from queue import Queue
 import random
 import pylab as plt
+import sys 
 
 ### GLOBAL STRING TO INT CONSTANTS
 # NaN
@@ -85,6 +86,8 @@ def removeBadRows(data_dict):
 
 	for key in data_dict:
 		row = data_dict[key]
+		if row[TOTAL_ACC] is None:
+			bad_keys.append(key)
 		try:
 			float(row[LOAN_AMNT])
 			float(row[DTI])
@@ -223,32 +226,16 @@ def normalize(data_dict):
 
 	for key in data_dict:
 		row = data_dict[key]
-		if(row[DTI] > maxes[DTI]):
-			maxes[DTI] = row[DTI]
-		if(row[INT_RATE] > maxes[INT_RATE]):
-			maxes[INT_RATE] = row[INT_RATE]
-		if(row[ANNUAL_INC] > maxes[ANNUAL_INC]):
-			maxes[ANNUAL_INC] = row[ANNUAL_INC]
-		if(row[LOAN_AMNT] > maxes[LOAN_AMNT]):
-			maxes[LOAN_AMNT] = row[LOAN_AMNT]
-		if(row[DELINQ_2YRS] > maxes[DELINQ_2YRS]):
-			maxes[DELINQ_2YRS] = row[DELINQ_2YRS]
-		if(row[INSTALLMENT] > maxes[INSTALLMENT]):
-			maxes[INSTALLMENT] = row[INSTALLMENT]
-		if(row[INQ_LAST_6MTHS] > maxes[INQ_LAST_6MTHS]):
-			maxes[INQ_LAST_6MTHS] = row[INQ_LAST_6MTHS]
-		if(row[OPEN_ACC] > maxes[OPEN_ACC]):
-			maxes[OPEN_ACC] = row[OPEN_ACC]
-		if(row[PUB_REC] > maxes[PUB_REC]):
-			maxes[PUB_REC] = row[PUB_REC]
-		if(row[REVOL_BAL] > maxes[REVOL_BAL]):
-			maxes[REVOL_BAL] = row[REVOL_BAL]
-		if(row[TOTAL_ACC] > maxes[TOTAL_ACC]):
-			maxes[TOTAL_ACC] = row[TOTAL_ACC]
+		for i in range(1, 16):
+			if float(row[i]) > maxes[i]:
+				maxes[i] = float(row[i])
 
 	for key in data_dict:
-		# is there a loop through columns in python dictionaries?
+		row = data_dict[key]
 		# normalize the values row[val] /= maxes[val]
+		for i in range(1, 16):
+			row[i] = float(row[i]) / maxes[i]
+
 	return data_dict
 
 '''
@@ -379,28 +366,37 @@ def test(train_data, test_data):
 	print("Right: ", right/total_cases)
 	print("Wrong: ", wrong/total_cases)
 
-
-#######################################################################################################################
-
-
-if __name__ == '__main__':
+'''
+	Returns the training and test data.
+'''
+def getData(test_data='LoanStats3b.csv', train_data='train_data.csv'):
 	cols = ['loan_status', 'loan_amnt', 'home_ownership', 'dti', 'int_rate', 'annual_inc', 'grade', 'emp_length', 'delinq_2yrs',
 			'term', 'installment', 'inq_last_6mths', 'open_acc', 'pub_rec', 'revol_bal', 'total_acc']
 
 	print('Getting test data...')
-	test_data = dc.get_data('LoanStats3b.csv', prune_cols=cols)
+	test_data = dc.get_data(test_data, prune_cols=cols)
 	test_data = intRateToNumeric(test_data)
 	test_data = convertStringsToNumeric(test_data)
 	test_data = removeBadRows(test_data)
 
 	print('\nGetting train data...')
-	train_data = dc.get_data('train_data.csv', prune_cols=cols)
+	train_data = dc.get_data(train_data, prune_cols=cols)
 	train_data = convertStringsToNumeric(train_data)
 	train_data = intRateToNumeric(train_data)
 	train_data = removeBadRows(train_data)
 
+	print("\nNormalizing data...")
+	train_data = normalize(train_data)
+	test_data = normalize(test_data)
+
+	return test_data, train_data
+
+
+'''
+	Runs the classifier.
+'''
+def run(cases, neighbors, test_data, train_data):
 	# get cases  
-	cases = 500
 	start = random.randint(0, len(test_data) - (cases + 1))
 	examples = dict()
 	for k, v in list(test_data.items())[start:start+cases]:
@@ -421,19 +417,19 @@ if __name__ == '__main__':
 	for key in examples:
 		row = examples[key]
 		actual = row[0]
-		classification = knn(row[1:], train_data, 3)
+		classification = knn(row[1:], train_data, neighbors)
 		if classification[0] == 0:
 			negatives += 1
 		else:
 			positives += 1
 		if  classification[0] == actual:
 			right += 1
-			print("Correct classification. Average Distance: ", classification[3])
+			#print("Correct classification. Average Distance: ", classification[3])
 			correct_certain.append(classification[1])
 			correct_min_dist.append(classification[2])
 			correct_avg_dist.append(classification[3])
 		else:
-			print("Incorrect classification. Average Distance: ", classification[3], ' Actual: ', actual)
+			#print("Incorrect classification. Average Distance: ", classification[3], ' Actual: ', actual)
 			incorrect_certain.append(classification[1])
 			incorrect_min_dist.append(classification[2])
 			incorrect_avg_dist.append(classification[3])
@@ -455,10 +451,44 @@ if __name__ == '__main__':
 	print("\nCorrect Avg Distance Average: ", sum(correct_avg_dist)/len(correct_avg_dist))
 	print("Incorrect Avg Distance Average: ", sum(incorrect_avg_dist)/len(incorrect_avg_dist))
 
-
-	c_run = [i for i in range(len(correct_avg_dist))]
-	i_run = [i for i in  range(len(incorrect_avg_dist))]
+	# c_run = [i for i in range(len(correct_avg_dist))]
+	# i_run = [i for i in  range(len(incorrect_avg_dist))]
 	
-	plt.plot(c_run, correct_avg_dist, 'g.')
-	plt.plot(i_run, incorrect_avg_dist, 'r.')
-	plt.show()
+	# plt.plot(c_run, correct_avg_dist, 'g.')
+	# plt.plot(i_run, incorrect_avg_dist, 'r.')
+	# plt.show()
+	return [right/cases, wrong/cases]
+
+'''
+	Entry of the program.
+
+	Takes two parameters 'python3 knn_classifier.py <runs> <neighbors> <cases>' 
+	OR 
+	no paramters, defaults will be used:
+		runs = 10
+		neighbors = 5
+		cases = 100
+'''
+if __name__ == '__main__':
+	test_data, train_data = getData()
+
+	if len(sys.argv) < 4:
+		runs = 10
+		neighbors = 5
+		cases = 100
+	else:
+		runs = int(sys.argv[1])
+		neighbors = int(sys.argv[2])
+		cases = int(sys.argv[3])
+
+	right = []
+	wrong = []
+	for i in range(1, runs + 1):
+		print('\nProcessing run ' + str(i) + ' of ' + str(runs))
+		r, w = run(cases, neighbors, test_data, train_data)
+		right.append(r)
+		wrong.append(w)
+
+	print(right)
+	print(wrong)
+	
