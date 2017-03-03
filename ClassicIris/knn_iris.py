@@ -9,9 +9,47 @@ import classify as clsfy
 
 
 # CLASSES
-IRIS_SETOSA = 0
-IRIS_VERSICOLOR = 1
-IRIS_VIRGINICA = 2
+IRIS_SETOSA = [0, 'Iris-setosa']
+IRIS_VERSICOLOR = [1, 'Iris-versicolor']
+IRIS_VIRGINICA = [2, 'Iris-virginica']
+
+'''
+	Prints user options.
+'''
+def print_options():
+	print('\nSelect from the following options:')
+	print('\t(N)ew measurements')
+	print('\t(E)xit')
+
+def get_iris_data():
+	SepalLengthCm = float(input('Sepal Length (cm): '))
+	SepalWidthCm = float(input('Sepal Width (cm): '))
+	PetalLengthCm = float(input('Petal Length (cm): '))
+	PetalWidthCm = float(input('Petal Width (cm): '))
+	return [SepalLengthCm, SepalWidthCm, PetalLengthCm, PetalWidthCm]
+
+
+'''
+	Allows users to input new measurements to classify the plants.
+'''
+def main_loop(neighbors, training_data):
+	while True:
+		print_options()
+		choice = input('Select an option: ')
+		if choice.lower() == 'e':
+			break
+		elif choice.lower() == 'n':
+			x_t = get_iris_data()
+			classification = clsfy.knn(x_t, training_data, 3, neighbors)[0]
+			if classification == IRIS_SETOSA[0]:
+				print('Classification: ', IRIS_SETOSA[1])
+			elif classification == IRIS_VERSICOLOR[0]:
+				print('Classification: ', IRIS_VERSICOLOR[1])
+			elif classification == IRIS_VIRGINICA[0]:
+				print('Classification: ', IRIS_VIRGINICA[1])
+		else:
+			print('Invalid option.')
+	return
 
 
 '''
@@ -20,18 +58,21 @@ IRIS_VIRGINICA = 2
 def ClassToNumeric(data):
 	for key in data:
 		if data[key][0] == 'Iris-virginica':
-			data[key][0] = IRIS_VIRGINICA
+			data[key][0] = IRIS_VIRGINICA[0]
 		elif data[key][0] == 'Iris-versicolor':
-			data[key][0] = IRIS_VERSICOLOR
+			data[key][0] = IRIS_VERSICOLOR[0]
 		elif data[key][0] == 'Iris-setosa':
-			data[key][0] = IRIS_SETOSA
+			data[key][0] = IRIS_SETOSA[0]
 			
 	return data
 
 if __name__ == "__main__":
 	filename = "Iris.csv"
 	data = dc.get_data(filename)
-	neighbors = 5
+
+	neighbors = 3
+	if len(sys.argv) > 1:
+		neighbors = int(sys.argv[1])	
 
 	# in this case, to shuffle the data we added a column in Excel that was just '=rand()'
 	# dragging this column down prroduced a random number for each row, sorting on this
@@ -74,11 +115,15 @@ if __name__ == "__main__":
 
 	print('\n\nNeighbors: ', neighbors)
 
-	print("\nCorrect: ", right, '/', len(test), ' = ', right/len(test))
+	print("Correct: ", right, '/', len(test), ' = ', right/len(test))
 	print("Wrong: ", wrong, '/', len(test), ' = ', wrong/len(test))
 
-	print('\nIncorrect Average Min Distance: ', sum(incorrect_min_dists)/len(incorrect_min_dists))
+	print('Incorrect Average Min Distance: ', sum(incorrect_min_dists)/len(incorrect_min_dists))
 	print('Incorrect Average Average Distance: ', sum(incorrect_avg_dists)/len(incorrect_avg_dists))
 
-	print('\nCorrect Average Min Distance: ', sum(correct_min_dists)/len(correct_min_dists))
+	print('Correct Average Min Distance: ', sum(correct_min_dists)/len(correct_min_dists))
 	print('Correct Average Min Distance: ', sum(correct_avg_dists)/len(correct_avg_dists))
+
+	print('\n\nPredicted Iris\' with ', (right/len(test))*100, '% accuracy.')
+	
+	main_loop(neighbors, train)
