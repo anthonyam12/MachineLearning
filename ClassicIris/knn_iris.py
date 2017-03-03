@@ -44,11 +44,11 @@ if __name__ == "__main__":
 	data = ClassToNumeric(data)
 
 	train = dict()
-	for k, v in list(data.items())[:-130]:
+	for k, v in list(data.items())[:-100]:
 		train[k] = v
 
 	test = dict()
-	for k, v in list(data.items())[-130:]:
+	for k, v in list(data.items())[-100:]:
 		test[k] = v
 	
 	right = 0
