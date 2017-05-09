@@ -1,0 +1,129 @@
+import numpy as np
+from scipy import optimize
+import matplotlib.pyplot as plt 
+
+# source https://www.youtube.com/watch?v=9KM9Td6RVgQ&list=PLxtZWOzqbApW6Yvw41wDf0uc5hixr1b02&index=6
+class NeuralNetwork(object):
+	def __init__(self):
+		self.inputLayerSize = 2
+		self.outputLayerSize = 1
+		self.hiddenLayerSize = 3
+
+		self.W1 = np.random.randn(self.inputLayerSize, self.hiddenLayerSize)
+		self.W2 = np.random.randn(self.hiddenLayerSize, self.outputLayerSize)
+
+	def forward(self, X):
+		self.z2 = np.dot(X, self.W1)
+		self.a2 = self.sigmoid(self.z2)
+		self.z3 = np.dot(self.a2, self.W2)
+		yHat = self.sigmoid(self.z3)
+		return yHat
+
+	def sigmoid(self, z):
+		return 1/(1+np.exp(-z))
+
+	def dsigmoid(self, z):
+		return np.exp(-z)/((1+np.exp(-z))**2)
+
+	# sum of squared errors
+	def cost(self, X, y):
+		yHat = self.forward(X)
+		E = 0.5*sum((y-yHat)**2)
+		return E
+
+	def costPrime(self, X, y):
+		self.yHat = self.forward(X)
+
+		deltak = np.multiply(-(y-self.yHat), self.dsigmoid(self.z3))
+		dEdWjk = np.dot(self.a2.T, deltak)
+
+		deltaj = np.dot(deltak, self.W2.T)*self.dsigmoid(self.z2)
+		dEdWij = np.dot(X.T, deltaj)
+
+		return dEdWjk, dEdWij
+
+	# Numerical Gradient Checking - determine if our NN gradient descent is working
+	def getParams(self):
+		params = np.concatenate((self.W1.ravel(), self.W2.ravel()))
+		return params
+
+	def setParams(self, params):
+		W1_start = 0
+		W1_end = self.hiddenLayerSize * self.inputLayerSize
+		self.W1 = np.reshape(params[W1_start:W1_end], (self.inputLayerSize , self.hiddenLayerSize))
+		W2_end = W1_end + self.hiddenLayerSize*self.outputLayerSize
+		self.W2 = np.reshape(params[W1_end:W2_end], (self.hiddenLayerSize, self.outputLayerSize))
+
+	def computeGradients(self, X, y):
+		dEdWjk, dEdWij = self.costPrime(X, y)
+		return np.concatenate((dEdWij.ravel(), dEdWjk.ravel()))
+
+def computeNumericalGradient(N, X, y):
+	paramsInitial = N.getParams()
+	numgrad = np.zeros(paramsInitial.shape)
+	perturb = np.zeros(paramsInitial.shape)
+	e = 1e-4
+
+	for p in range(len(paramsInitial)):
+		perturb[p] = e
+		N.setParams(paramsInitial + perturb)
+		loss2 = N.cost(X, y)
+
+		N.setParams(paramsInitial - perturb)
+		loss1 = N.cost(X, y)
+
+		numgrad[p] = (loss2 - loss1) / (2*e)
+		perturb[p] = 0
+
+	N.setParams(paramsInitial)
+	return numgrad
+
+
+class trainer(object):
+	def __init__(self, N):
+		self.N = N
+
+	def costFunctionWrapper(self, params, X, y):
+		self.N.setParams(params)
+		cost = self.N.cost(X, y)
+		grad = self.N.computeGradients(X, y)
+		return cost, grad
+
+	def callbackF(self, params):
+		self.N.setParams(params)
+		self.E.append(self.N.cost(self.X, self.y))
+
+	def train(self, X, y):
+		self.X = X
+		self.y = y
+
+		self.E = []
+		params0 = self.N.getParams()
+
+		options = {'maxiter': 200, 'disp': True}
+		_res = optimize.minimize(self.costFunctionWrapper, params0, \
+									jac=True, method='BFGS', args=(X,y), \
+									options=options, callback=self.callbackF)
+
+		self.N.setParams(_res.x)
+		self.optimimizationResults = _res
+
+
+x = np.array(([3,5], [5,1], [10,2]), dtype=float)
+y = np.array(([75], [82], [93]), dtype=float)
+
+# scale the data
+x = x/np.max(x, axis=0)
+y = y/100 # test scores in this case so max is 100
+
+eta = 3
+
+NN = NeuralNetwork()
+T = trainer(NN)
+T.train(x, y)
+
+plt.plot(T.E)
+plt.grid(1)
+plt.xlabel('Iterations')
+plt.ylabel('Cost')
+plt.show()
