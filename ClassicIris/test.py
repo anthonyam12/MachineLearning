@@ -95,6 +95,9 @@ testX = testX/np.max(testX, axis=0)
 dy = y[-testSize:]
 testY = np.array([[i] for i in dy])
 
+print(trainX)
+input()
+
 T = trainer(NN)
 T.train(trainX, trainY)
 

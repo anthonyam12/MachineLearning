@@ -1,11 +1,14 @@
 import random
 import os
 import sys
+import numpy as np
 
 cwd = os.getcwd()
 sys.path.append(cwd + '/../common/')
 import data_controller as dc
 import classify as clsfy
+from ann import *
+from trainer import *
 
 
 ### GLOBAL STRING TO INT CONSTANTS
@@ -198,26 +201,9 @@ def convertStringsToNumeric(data_dict):
 	
 	return data_dict
 
-
 #######################################################################################################################
 
-
-if __name__ == '__main__':
-	cols = ['loan_status', 'loan_amnt', 'home_ownership', 'dti', 'int_rate', 'annual_inc', 'grade', 'emp_length', 'delinq_2yrs',
-			'term', 'installment', 'inq_last_6mths', 'open_acc', 'pub_rec', 'revol_bal', 'total_acc']
-
-	print('Getting test data...')
-	test_data = dc.get_data('LoanStats3b.csv', prune_cols=cols)
-	test_data = intRateToNumeric(test_data)
-	test_data = convertStringsToNumeric(test_data)
-	test_data = removeBadRows(test_data)
-
-	print('\nGetting train data...')
-	train_data = dc.get_data('train_data.csv', prune_cols=cols)
-	train_data = convertStringsToNumeric(train_data)
-	train_data = intRateToNumeric(train_data)
-	train_data = removeBadRows(train_data)
-
+def run_knn():
 	# get 100 rows 
 	cases = 300
 	start = random.randint(0, len(test_data) - (cases + 1))
@@ -273,3 +259,67 @@ if __name__ == '__main__':
 
 	print("\nCorrect Avg Distance Average: ", sum(correct_avg_dist)/len(correct_avg_dist))
 	print("Incorrect Avg Distance Average: ", sum(incorrect_avg_dist)/len(incorrect_avg_dist))
+
+def normalize_data(data):
+
+	return data
+
+if __name__ == '__main__':
+	cols = ['loan_status', 'loan_amnt', 'home_ownership', 'dti', 'int_rate', 'annual_inc', 'grade', 'emp_length', 'delinq_2yrs',
+			'term', 'installment', 'inq_last_6mths', 'open_acc', 'pub_rec', 'revol_bal', 'total_acc']
+
+	print('Getting test data...')
+	test_data = dc.get_data('LoanStats3b.csv', prune_cols=cols)
+	test_data = intRateToNumeric(test_data)
+	test_data = convertStringsToNumeric(test_data)
+	test_data = removeBadRows(test_data)
+
+	print('\nGetting train data...')
+	train_data = dc.get_data('train_data.csv', prune_cols=cols)
+	train_data = convertStringsToNumeric(train_data)
+	train_data = intRateToNumeric(train_data)
+	train_data = removeBadRows(train_data)
+
+	trainX = []
+	trainY = []
+	for key in train_data:
+		row = train_data[key]
+		for i in range(0, len(row)):
+			row[i] = float(row[i])
+		trainY.append(row[0])
+		trainX.append(row[1:])
+
+	trainX = trainX	# [0:1000]
+	trainY = trainY # [0:1000]
+
+	#### NOT SURE WHICH IT IS (I think it's the trainY array), but this is how we MUST
+	#		build these arrays, otherwise, delta_k grows improperly and has too many columns
+	trainX = np.array([row for row in trainX])
+	trainY = np.array([[i] for i in trainY])
+
+	trainX = trainX/trainX.max(axis=0)
+
+	testX = []
+	testY = []
+	for key in test_data:
+		row = test_data[key]
+		for i in range(0, len(row)):
+			row[i] = float(row[i])
+		testY.append(row[0])
+		testX.append(row[1:])
+	testX = np.array(testX)
+	testX = testX / testX.max(axis=0)
+	testY = np.array([[i] for i in testY])
+
+	NN = NeuralNetwork(15, 1, 15)
+	T = trainer(NN)
+	T.train(trainX, trainY)
+
+
+	print(NN.W1, '\n', NN.W2)
+	yHats = np.round(2*NN.forward(testX).T)
+	y = testY.T
+
+	errorDiff = (yHats-y)**2
+	print('\n\nMisclassified ' + str(np.sum(errorDiff)) + ' out of ' + str(len(testX)))
+	print(float(float(np.sum(errorDiff)) / float(len(testX))))
