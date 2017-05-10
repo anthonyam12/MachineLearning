@@ -68,6 +68,9 @@ clf = MLPRegressor(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5,2), random_
 clf.fit(trainX, trainY)
 print(clf.score(testX, testY))
 yHats = clf.predict(testX)
+yHats = np.round(yHats)
 
-print(np.round(yHats))
+print(yHats)
 print(testY)
+print('\n')
+print('Misclssified: ' + str(sum(abs(testY - yHats))) + ' out of ' + str(testSize) + ' = ' + str(float(abs(sum(testY-yHats)))/float(testSize)))

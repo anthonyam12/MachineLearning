@@ -46,7 +46,7 @@ def computeNumericalGradient(N, X, y):
 
 data = dc.get_data(DATA_FILE_NAME)
 NN = NeuralNetwork(4, 1, 5)
-testSize = 50
+testSize = 100
 
 y = []
 for key in data:
@@ -91,7 +91,7 @@ for k in test:
 # create [samples x input] numpy array, one row for each training data
 testX = np.array([row for row in rows])
 testX = testX/np.max(testX, axis=0)
-
+ 
 dy = y[-testSize:]
 testY = np.array([[i] for i in dy])
 
@@ -104,6 +104,8 @@ T.train(trainX, trainY)
 # plt.ylabel('Cost')
 # plt.show()
 
+yHats = np.round(2*NN.forward(testX).T)
+y = (2*testY).T
 
-print(NN.forward(testX))
-print(testY)
+errorDiff = (yHats-y)**2
+print('\n\nMisclassified ' + str(np.sum(errorDiff)) + ' out of ' + str(testSize))
