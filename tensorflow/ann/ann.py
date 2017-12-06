@@ -1,37 +1,39 @@
 """ Class containing the class definition of an artificial neural network.
 
 This file contains the class definition of an artificial neural network in python.
+The purpose of this class is to allow the creation of GENERAL neural networks rather than
+limiting the size.
 
-TODO:
-    All
 """
-
+# import the TensorFlow library
+import tensorflow as tf
 import numpy as np
 
 
-class Ann(object):
+class ANN(object):
+    # Static methods for the activation functions and activation derivatives.
     @staticmethod
     def logistic(x):
-        return 1 / (1 + np.exp(-x))
+        return 1 / (1 + tf.exp(-x))
 
     @staticmethod
     def d_logistic(x):
-        return Ann.logistic(x) * (1 - Ann.logistic(x))
+        return ANN.logistic(x) * (1 - ANN.logistic(x))
 
     @staticmethod
     def tanh(x):
-        return np.tanh(x)
+        return tf.tanh(x)
 
     @staticmethod
     def d_tanh(x):
-        return 1.0 - np.tanh(x) ** 2
+        return 1.0 - tf.tanh(x) ** 2
 
     @staticmethod
     def loss(y, y_hat):
         return 0.5 * sum((y - y_hat)**2)
 
     def __init__(self, number_hidden_layers, hidden_layer_sizes, output_layer_size, input_layer_size,
-                 activation='logistic', l_rate=0.1):
+                 activation='logistic'):
         """ Creates an artificial neural network with the parameters provided.
 
         Args:
@@ -40,8 +42,9 @@ class Ann(object):
             output_layer_size (int): number of nodes in the output layer
             input_layer_size (int): the length of the feature vector; number of inputs to the network
             activation (string): default = logistic; which activation function to use { tanh, logistic }
-            l_rate (float): the learning rate of the algorithm, typically denoted eta
         """
+
+        # Set the parameters of the network
         self.hidden_layer_count = number_hidden_layers
         self.hidden_layer_sizes = hidden_layer_sizes
         self.n_classes = output_layer_size
@@ -49,89 +52,93 @@ class Ann(object):
         self.hidden_layers = []
         self.output_layer = None
         self.activation = activation
-        self.eta = l_rate
-        self.residuals = []
         self.x = None
 
         if activation == 'logistic':
-            self.activation_function = Ann.logistic
-            self.activation_derivative = Ann.d_logistic
+            self.activation_function = ANN.logistic
+            self.activation_derivative = ANN.d_logistic
         else:
-            self.activation_function = Ann.tanh
-            self.activation_derivative = Ann.d_tanh
+            self.activation_function = ANN.tanh
+            self.activation_derivative = ANN.d_tanh
 
+        # invalid parameter settings
         if len(self.hidden_layer_sizes) != self.hidden_layer_count:
             print("\nFailed to create neural network. Hidden layer count is not equal to number of hidden layers sizes"
                   " provided.")
             exit(0)
 
+        # creates the Neural Network, builds the model
         self.build_model()
 
     def build_model(self):
-        """ Builds the TensorFlow model of the neural network
+        """ Builds the TensorFlow model of the neural network with the provided parameters.
         """
-        self.hidden_layers.append({'weights': np.random.randn(self.n_inputs, self.hidden_layer_sizes[0]),
-                                   'biases': np.random.randn(self.hidden_layer_sizes[0]),
-                                   'output': None,
-                                   'input': None,
-                                   'deltaW': 0.0,
-                                   'deltaB': 0.0})
+
+        # The first hidden layer has a different size than the others since the inputs are the x vector values
+        self.hidden_layers.append({'weights': tf.Variable(tf.random_normal([self.n_inputs, self.hidden_layer_sizes[0]], dtype=tf.float64)),
+                                   'biases': tf.Variable(tf.random_normal([self.hidden_layer_sizes[0]], dtype=tf.float64))})
+
+        # create the hidden layers based on the sizes in self.hidden_layer_sizes
         for i in range(1, self.hidden_layer_count):
-            self.hidden_layers.append({'weights': np.random.randn(self.hidden_layer_sizes[i - 1], self.hidden_layer_sizes[i]),
-                                       'biases': np.random.randn(self.hidden_layer_sizes[i]),
-                                       'output': None,
-                                       'input': None,
-                                       'deltaW': 0.0,
-                                       'deltaB': 0.0})
-        self.output_layer = {'weights': np.random.randn(self.hidden_layer_sizes[self.hidden_layer_count - 1], self.n_classes),
-                             'biases': np.random.randn(self.n_classes),
-                             'output': None,
-                             'input': None,
-                             'deltaW': 0.0,
-                             'deltaB': 0.0}
+            self.hidden_layers.append({'weights': tf.Variable(tf.random_normal(
+                                                [self.hidden_layer_sizes[i - 1], self.hidden_layer_sizes[i]],
+                                                dtype=tf.float64)),
+                                       'biases': tf.Variable(tf.random_normal([self.hidden_layer_sizes[i]], dtype=tf.float64))})
+
+        # create the output layer
+        self.output_layer = {'weights': tf.Variable(tf.random_normal(
+                                        [self.hidden_layer_sizes[self.hidden_layer_count - 1], self.n_classes],
+                                        dtype=tf.float64)),
+                             'biases': tf.Variable(tf.random_normal([self.n_classes], dtype=tf.float64))}
 
     def feed_forward(self, x):
         """ Runs an example vector through the NN and produces a yHat response
         """
-        self.x = x
-        z_mat = np.add(np.matmul(x, self.hidden_layers[0]['weights']), self.hidden_layers[0]['biases'])
-        self.hidden_layers[0]['input'] = z_mat
-        z_mat = self.activation_function(z_mat)    # This is the activation function, can select another or make it a parameter
-        self.hidden_layers[0]['output'] = z_mat
+
+        # first step uses x vector as input)
+        il = tf.add(tf.matmul(x, self.hidden_layers[0]['weights']), self.hidden_layers[0]['biases'])
+        a = self.activation_function(il)
+
+        # feed the outputs forward through the hidden layers
         for i in range(1, self.hidden_layer_count):
-            z_mat = np.add(np.matmul(z_mat, self.hidden_layers[i]['weights']), self.hidden_layers[i]['biases'])
-            self.hidden_layers[i]['input'] = z_mat
-            z_mat = self.activation_function(z_mat)
-            self.hidden_layers[i]['output'] = z_mat
+            l = tf.add(tf.matmul(a, self.hidden_layers[i]['weights']), self.hidden_layers[i]['biases'])
+            a = self.activation_function(l)
 
-        self.output_layer['input'] = z_mat
-        output = np.matmul(z_mat, self.output_layer['weights'] + self.output_layer['biases'])
-        self.output_layer['output'] = output
+        # get the output of the network
+        output = tf.matmul(a, self.output_layer['weights']) + self.output_layer['biases']
+
+        # optionally, could send the output through an activation function or THE activation function of the NN
+        # output = self.activation_function(output)
+        # OR
+        # output = tf.nn.relu(output)
+        # ...
+
         return output
-
-    def back_propagate(self, y, y_hat):
-        self.compute_gradients(y, y_hat)
-        self.update_weights()
-
-    def compute_gradients(self, y, y_hat):
-        dk = (y - y_hat)
-        self.output_layer['deltaB'] = dk
-        dk = np.multiply(dk, self.activation_derivative(self.output_layer['output']))
-        self.output_layer['deltaW'] = np.dot(self.output_layer['input'].transpose(), dk)
-        for i in reversed(range(0, self.hidden_layer_count)):
-            dk = np.dot(dk, self.hidden_layers[i]['weights'].transpose())
-            self.hidden_layers[i]['deltaB'] = dk
-            dk *= self.activation_derivative(self.hidden_layers[i]['input'])
-            if i == 0:
-                self.hidden_layers[i]['deltaW'] = np.dot(self.x.transpose(), dk)
-            else:
-                self.hidden_layers[i]['deltaW'] = np.dot(self.hidden_layers[i - 1]['output'].transpose(), dk)
-
-    def update_weights(self):
-        return None
-
 
     def predict(self, x):
         """ Returns a prediction for the provided feature vector
         """
         return self.feed_forward(x)
+
+    def train(self, trainx, trainy, number_epochs=50):
+        """ Trains the neural network using trainx and trainy data
+        :param trainx: x data to train neural network
+        :param trainy: y data used to train neural network
+        :param number_epochs: default = 50, number of training epochs
+        :return:
+        """
+        # number of columns
+        x = tf.placeholder('float64', [None, trainx.shape[1]])
+        y = tf.placeholder('float64', [None, trainy.shape[1]])
+
+        y_hat = self.predict(x)
+        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_hat, labels=y))
+        optimizer = tf.train.AdamOptimizer().minimize(cost)  # https://arxiv.org/pdf/1412.6980.pdf
+        with tf.Session() as session:
+                session.run(tf.global_variables_initializer())
+                for epoch in range(number_epochs):
+                    loss = 0
+                    # assumes batch size = length of trainX, could change this by passing in batch size and partitioning
+                    # the datasets.
+                    _, c = session.run(optimizer, feed_dict={x: np.atleast_2d(trainx[1, :]), y: np.atleast_2d(trainy[1, :])})
+                    print('Epoch:', epoch, 'of', number_epochs, '\tloss:', c)

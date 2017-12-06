@@ -1,68 +1,91 @@
+# Implementation of a simple MLP network with one hidden layer. Tested on the iris data set.
+# Requires: numpy, sklearn>=0.18.1, tensorflow>=1.0
+
+# NOTE: In order to make the code simple, we rewrite x * W_1 + b_1 = x' * W_1'
+# where x' = [x | 1] and W_1' is the matrix W_1 appended with a new row with elements b_1's.
+# Similarly, for h * W_2 + b_2
 import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
+import numpy as np
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
 
-mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
-
-n_classes = 10
-input_size = 784
-n_nodes_hl1 = 500
-n_nodes_hl2 = 500
-n_nodes_hl3 = 500
-batch_size = 100
-
-x = tf.placeholder('float', [None, input_size])  # input vector placeholder
-y = tf.placeholder('float')  # output vector placeholder
+RANDOM_SEED = 42
+tf.set_random_seed(RANDOM_SEED)
 
 
-def nn_model(data):
-    # weights [length(x), size(hidden_layer)]
-    hidden_layer_1 = {'weights': tf.Variable(tf.random_normal([784, n_nodes_hl1])),
-                      'biases': tf.Variable(tf.random_normal([n_nodes_hl1]))}
-    # weights [number nodes from previous hidden layer, number nodes in this layer]
-    hidden_layer_2 = {'weights': tf.Variable(tf.random_normal([n_nodes_hl1, n_nodes_hl2])),
-                      'biases': tf.Variable(tf.random_normal([n_nodes_hl2]))}
-    hidden_layer_3 = {'weights': tf.Variable(tf.random_normal([n_nodes_hl2, n_nodes_hl3])),
-                      'biases': tf.Variable(tf.random_normal([n_nodes_hl3]))}
-    # output layer input = size of previous layer, output = number of classes
-    output_layer = {'weights': tf.Variable(tf.random_normal([n_nodes_hl3, n_classes])),
-                    'biases': tf.Variable(tf.random_normal([n_classes]))}
+def init_weights(shape):
+    """ Weight initialization """
+    weights = tf.random_normal(shape, stddev=0.1)
+    return tf.Variable(weights)
 
-    l1 = tf.add(tf.matmul(data, hidden_layer_1['weights']), hidden_layer_1['biases'])
-    l1 = tf.nn.relu(l1)
+def forwardprop(X, w_1, w_2):
+    """
+    Forward-propagation.
+    IMPORTANT: yhat is not softmax since TensorFlow's softmax_cross_entropy_with_logits() does that internally.
+    """
+    h    = tf.nn.sigmoid(tf.matmul(X, w_1))  # The \sigma function
+    yhat = tf.matmul(h, w_2)  # The \varphi function
+    return yhat
 
-    l2 = tf.add(tf.matmul(l1, hidden_layer_2['weights']), hidden_layer_2['biases'])
-    l2 = tf.nn.relu(l2)
+def get_iris_data():
+    """ Read the iris data set and split them into training and test sets """
+    iris   = datasets.load_iris()
+    data   = iris["data"]
+    target = iris["target"]
 
-    l3 = tf.add(tf.matmul(l2, hidden_layer_3['weights']), hidden_layer_3['biases'])
-    l3 = tf.nn.relu(l3)
+    # Prepend the column of 1s for bias
+    N, M  = data.shape
+    all_X = np.ones((N, M + 1))
+    all_X[:, 1:] = data
 
-    output = tf.matmul(l3, output_layer['weights']) + output_layer['biases']
+    # Convert into one-hot vectors
+    num_labels = len(np.unique(target))
+    all_Y = np.eye(num_labels)[target]  # One liner trick!
+    return train_test_split(all_X, all_Y, test_size=0.33, random_state=RANDOM_SEED)
 
-    return output
+def main():
+    train_X, test_X, train_y, test_y = get_iris_data()
 
+    # Layer's sizes
+    x_size = train_X.shape[1]   # Number of input nodes: 4 features and 1 bias
+    h_size = 256                # Number of hidden nodes
+    y_size = train_y.shape[1]   # Number of outcomes (3 iris flowers)
 
-def train_neural_network():
-    prediction = nn_model(x)
-    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=prediction, labels=y))
-    optimizer = tf.train.AdamOptimizer().minimize(cost)
+    # Symbols
+    X = tf.placeholder("float", shape=[None, x_size])
+    y = tf.placeholder("float", shape=[None, y_size])
 
-    hm_epochs = 10
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+    # Weight initializations
+    w_1 = init_weights((x_size, h_size))
+    w_2 = init_weights((h_size, y_size))
 
-        for epoch in range(hm_epochs):
-            epoch_loss = 0
-            for _ in range(int(mnist.train.num_examples / batch_size)):
-                epoch_x, epoch_y = mnist.train.next_batch(batch_size)
-                _, c = sess.run([optimizer, cost], feed_dict={x: epoch_x, y: epoch_y})
-                epoch_loss += c
+    # Forward propagation
+    yhat    = forwardprop(X, w_1, w_2)
+    predict = tf.argmax(yhat, axis=1)
 
-            print('Epoch', epoch, 'completed out of', hm_epochs, 'loss:', epoch_loss)
+    # Backward propagation
+    cost    = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=yhat))
+    updates = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
 
-        correct = tf.equal(tf.argmax(prediction, 1), tf.argmax(y, 1))
+    # Run SGD
+    sess = tf.Session()
+    init = tf.global_variables_initializer()
+    sess.run(init)
 
-        accuracy = tf.reduce_mean(tf.cast(correct, 'float'))
-        print('Accuracy:', accuracy.eval({x: mnist.test.images, y: mnist.test.labels}))
+    for epoch in range(100):
+        # Train with each example
+        for i in range(len(train_X)):
+            sess.run(updates, feed_dict={X: train_X[i: i + 1], y: train_y[i: i + 1]})
 
+        train_accuracy = np.mean(np.argmax(train_y, axis=1) ==
+                                 sess.run(predict, feed_dict={X: train_X, y: train_y}))
+        test_accuracy  = np.mean(np.argmax(test_y, axis=1) ==
+                                 sess.run(predict, feed_dict={X: test_X, y: test_y}))
 
-train_neural_network()
+        print("Epoch = %d, train accuracy = %.2f%%, test accuracy = %.2f%%"
+              % (epoch + 1, 100. * train_accuracy, 100. * test_accuracy))
+
+    sess.close()
+
+if __name__ == '__main__':
+    main()
