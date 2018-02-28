@@ -9,7 +9,7 @@ sys.path.append(cwd + '/../common/')
 from trainer import *
 
 trainSize = 150
-df = pd.read_csv('world_happiness2016_randCol.csv')
+df = pd.read_csv('world_happiness2016.csv')
 df = df.reindex(np.random.permutation(df.index))
 
 y = df.iloc[:,3].as_matrix()
@@ -25,7 +25,7 @@ testX = np.array([i for i in testX])
 trainY = np.array([[i] for i in trainY])
 testY = np.array([[i] for i in testY])
 
-NN = NeuralNetwork(8, 1, 11)
+NN = NeuralNetwork(7, 1, 11)
 T = trainer(NN)
 T.train(trainX, trainY)
 

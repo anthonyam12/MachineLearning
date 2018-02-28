@@ -56,3 +56,7 @@ class NeuralNetwork(object):
 	def computeGradients(self, X, y):
 		dEdWjk, dEdWij = self.costPrime(X, y)
 		return np.concatenate((dEdWij.ravel(), dEdWjk.ravel()))
+
+	def printWeights(self):
+		print(self.W1)
+		print(self.W2)
