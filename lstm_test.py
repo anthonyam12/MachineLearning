@@ -18,6 +18,8 @@ if __name__ == '__main__':
     trainx = trainx.reshape((trainx.shape[0], 1, trainx.shape[1]))
     testx = testx.reshape((testx.shape[0], 1, testx.shape[1]))
 
+    print(trainx.shape)
+
     lstm = TensorflowLSTM(trainx.shape[1], 10, [10 for _ in range(0, 10)],
            trainy.shape[1], epochs=1000)
     # print(lstm.predict(testx))

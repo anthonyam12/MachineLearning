@@ -46,11 +46,7 @@ class TensorflowLSTM(object):
             # init_vars_op = tf.initialize_variables()
             output = sess.run(self.output, feed_dict={self.x: pred_x})
         return output
-
-"""
-    USE A GLOBAL SESSIONS!!!!!!!!!!!!!!!!!!
-"""
-
+    
     def train(self, trainx, trainy):
         # Finish defining the graph
         with self.graph.as_default():
